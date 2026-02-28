@@ -7,13 +7,29 @@ import { initializeSocket } from './socket/socketHandler.js'
 dotenv.config()
 
 const PORT = process.env.PORT || 5000
-const CLIENT_URL = process.env.CLIENT_URL || 'http://localhost:5173'
+
+// First .env se lo, Rest vercel previews from regex
+const allowedOrigins = [
+  process.env.CLIENT_URL,
+  /https:\/\/lost-and-found-system-.*\.vercel\.app$/,
+  'http://localhost:5173',
+]
 
 const httpServer = createServer(app)
 
 const io = new Server(httpServer, {
   cors: {
-    origin: CLIENT_URL,
+    origin: (origin, callback) => {
+      if (!origin) return callback(null, true)
+      const isAllowed = allowedOrigins.some(allowed =>
+        allowed instanceof RegExp
+          ? allowed.test(origin)
+          : allowed === origin
+      )
+      isAllowed
+        ? callback(null, true)
+        : callback(new Error(`CORS blocked: ${origin}`))
+    },
     methods: ['GET', 'POST'],
     credentials: true,
   },
@@ -22,12 +38,11 @@ const io = new Server(httpServer, {
   pingInterval: 25000,
 })
 
-// Initialize Socket.io handlers
 initializeSocket(io)
 
 app.get('/health', (req, res) => res.status(200).send('OK'))
 
 httpServer.listen(PORT, () => {
   console.log(`Server running on port ${PORT}`)
-  console.log(`Accepting connections from: ${CLIENT_URL}`)
+  console.log(`Primary origin: ${process.env.CLIENT_URL}`)
 })
