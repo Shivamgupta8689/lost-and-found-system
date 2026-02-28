@@ -22,57 +22,44 @@ export function SocketProvider({ children }) {
       return
     }
 
-const connectSocket = async () => {
-  try {
-    const token = await auth.currentUser?.getIdToken()
-    if (!token) return
+    let newSocket
 
-    const socketUrl = import.meta.env.VITE_SOCKET_URL || 'http://localhost:5000'
-    const newSocket = io(socketUrl, {
-      auth: { token },
-      transports: ['polling', 'websocket'],
-      reconnection: true,
-      reconnectionAttempts: 10,
-      reconnectionDelay: 2000,
-      timeout: 20000,
-    })
+    const connectSocket = async () => {
+      try {
+        const token = await auth.currentUser?.getIdToken()
+        if (!token) return
 
-    newSocket.on('connect', () => {
-      console.log('Socket connected:', newSocket.id)
-    })
+        const socketUrl = import.meta.env.VITE_SOCKET_URL || 'http://localhost:5000'
 
-    newSocket.on('connect_error', (err) => {
-      console.error('Socket connection error:', err.message)
-    })
+        newSocket = io(socketUrl, {
+          auth: { token },
+          transports: ['polling', 'websocket'],
+          reconnection: true,
+          reconnectionAttempts: 10,
+          reconnectionDelay: 2000,
+          timeout: 20000,
+        })
 
-    setSocket(newSocket)
+        newSocket.on('connect', () => {
+          console.log('Socket connected:', newSocket.id)
+        })
 
-    return newSocket // cleanup ke liye return karo
-  } catch (err) {
-    console.error('Failed to connect socket:', err)
-  }
-}
+        newSocket.on('connect_error', (err) => {
+          console.error('Socket connection error:', err.message)
+        })
 
-// Cleanup fix
-useEffect(() => {
-  if (!user) {
-    if (socket) {
-      socket.disconnect()
-      setSocket(null)
+        setSocket(newSocket)
+      } catch (err) {
+        console.error('Failed to connect socket:', err)
+      }
     }
-    return
-  }
 
-  let newSocket
-  const connect = async () => {
-    newSocket = await connectSocket()
-  }
-  connect()
+    connectSocket()
 
-  return () => {
-    if (newSocket) newSocket.disconnect() // ✅ correct reference
-  }
-}, [user])
+    return () => {
+      if (newSocket) newSocket.disconnect()
+    }
+  }, [user])
 
   return (
     <SocketContext.Provider value={socket}>
