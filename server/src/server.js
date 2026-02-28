@@ -17,10 +17,15 @@ const io = new Server(httpServer, {
     methods: ['GET', 'POST'],
     credentials: true,
   },
+  transports: ['polling', 'websocket'],
+  pingTimeout: 60000,
+  pingInterval: 25000,
 })
 
 // Initialize Socket.io handlers
 initializeSocket(io)
+
+app.get('/health', (req, res) => res.status(200).send('OK'))
 
 httpServer.listen(PORT, () => {
   console.log(`Server running on port ${PORT}`)
